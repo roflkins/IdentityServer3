@@ -475,6 +475,35 @@ namespace IdentityServer3.Host.Config
                 },
 
                 /////////////////////////////////////////////////////////////
+                // IdentityModel2.OidcClient with Hybrid Flow and PKCE
+                /////////////////////////////////////////////////////////////
+                new Client
+                {
+                    ClientName = "System Console with Hybrid Flow and PKCE",
+                    ClientId = "native.hybrid",
+                    Flow = Flows.HybridWithProofKey,
+
+                    ClientSecrets = new List<Secret>
+                    {
+                        new Secret("secret".Sha256())
+                    },
+
+                    RedirectUris = new List<string>
+                    {
+                        "http://127.0.0.1:7890/"
+                    },
+
+                    AllowedScopes = new List<string>
+                    {
+                        StandardScopes.OpenId.Name,
+                        StandardScopes.Profile.Name,
+                        "read", "write", "api"
+                    },
+
+                    AccessTokenType = AccessTokenType.Reference
+                },
+
+                /////////////////////////////////////////////////////////////
                 // WPF Client with Hybrid Flow and PKCE and PoP
                 /////////////////////////////////////////////////////////////
                 new Client

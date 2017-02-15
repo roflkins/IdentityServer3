@@ -108,7 +108,8 @@ namespace IdentityServer3.Core.ResponseHandling
                     Scopes = request.AuthorizationCode.RequestedScopes,
                     Nonce = request.AuthorizationCode.Nonce,
 
-                    ValidatedRequest = request
+                    ValidatedRequest = request,
+                    AccessTokenToHash = accessToken.Item1
                 };
 
                 var idToken = await _tokenService.CreateIdentityTokenAsync(tokenRequest);
