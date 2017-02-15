@@ -497,10 +497,11 @@ namespace IdentityServer3.Host.Config
                     {
                         StandardScopes.OpenId.Name,
                         StandardScopes.Profile.Name,
+                        StandardScopes.OfflineAccess.Name,
                         "read", "write", "api"
                     },
 
-                    AccessTokenType = AccessTokenType.Reference
+                    AccessTokenType = AccessTokenType.Reference,
                 },
 
                 /////////////////////////////////////////////////////////////
