@@ -151,8 +151,9 @@ namespace IdentityServer3.Core.Endpoints
             {
                 if (token.ClientId == client.ClientId)
                 {
-                    await _refreshTokens.RevokeAsync(token.SubjectId, token.ClientId);
-                    await _tokenHandles.RevokeAsync(token.SubjectId, token.ClientId);
+                    await _refreshTokens.RemoveAsync(handle); //The underlying code should make sure that all the access tokens regarding this is deleted - based on business logic.
+                    /*await _refreshTokens.RevokeAsync(token.SubjectId, token.ClientId);
+                    await _tokenHandles.RevokeAsync(token.SubjectId, token.ClientId);*/
                     await _events.RaiseTokenRevokedEventAsync(token.SubjectId, handle, Constants.TokenTypeHints.RefreshToken);
                 }
                 else
