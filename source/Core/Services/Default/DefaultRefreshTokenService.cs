@@ -108,6 +108,7 @@ namespace IdentityServer3.Core.Services.Default
             Logger.Debug("Updating refresh token");
 
             bool needsUpdate = false;
+            bool deleteOld = false;
             string newHandle = handle;
 
             if (client.RefreshTokenUsage == TokenUsage.OneTimeOnly)
@@ -115,7 +116,7 @@ namespace IdentityServer3.Core.Services.Default
                 Logger.Debug("Token usage is one-time only. Generating new handle");
 
                 // delete old one
-                await _store.RemoveAsync(handle);
+                deleteOld = true;
 
                 // create new one
                 newHandle = CryptoRandom.CreateUniqueId();
@@ -153,6 +154,9 @@ namespace IdentityServer3.Core.Services.Default
             {
                 Logger.Debug("No updates to refresh token done");
             }
+
+            if (deleteOld)
+                await _store.RemoveAsync(handle);
 
             await RaiseRefreshTokenRefreshedEventAsync(handle, newHandle, refreshToken);
 
