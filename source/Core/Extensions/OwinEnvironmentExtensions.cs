@@ -153,16 +153,27 @@ namespace IdentityServer3.Core.Extensions
         /// or
         /// login
         /// </exception>
-        public static void IssueLoginCookie(this IDictionary<string, object> env, AuthenticatedLogin login)
+        public static void IssueLoginCookie(this IDictionary<string, object> env, AuthenticatedLogin login, string partialSignInUrl = null, string loginId = null)
         {
             if (env == null) throw new ArgumentNullException("env");
             if (login == null) throw new ArgumentNullException("login");
+
+            bool isPartial = !string.IsNullOrEmpty(partialSignInUrl);
 
             var options = env.ResolveDependency<IdentityServerOptions>();
             var sessionCookie = env.ResolveDependency<SessionCookie>();
             var context = new OwinContext(env);
 
             var props = new AuthenticationProperties();
+
+            //If the login id is empty, populate it from the request query.
+            if (string.IsNullOrEmpty(loginId)) 
+            {
+                var id = context.Request.Query.Get(Constants.Authentication.SigninQueryParamName);
+
+                if (String.IsNullOrWhiteSpace(id)) return; //We don't have a login id... Abort.
+                loginId = id;
+            }
 
             // if false, then they're explicit in preventing a persistent cookie
             if (login.PersistentLogin != false)
@@ -178,6 +189,7 @@ namespace IdentityServer3.Core.Extensions
                 }
             }
 
+            //Populate the authentication metho and identity sources.
             var authenticationMethod = login.AuthenticationMethod;
             var identityProvider = login.IdentityProvider ?? Constants.BuiltInIdentityProvider;
             if (String.IsNullOrWhiteSpace(authenticationMethod))
@@ -192,7 +204,8 @@ namespace IdentityServer3.Core.Extensions
                 }
             }
 
-            var user = IdentityServerPrincipal.Create(login.Subject, login.Name, authenticationMethod, identityProvider, Constants.PrimaryAuthenticationType);
+            //Create the identity principal, setting the partial sign in if applicable.
+            var user = IdentityServerPrincipal.Create(login.Subject, login.Name, authenticationMethod, identityProvider, isPartial ? Constants.PartialSignInAuthenticationType : Constants.PrimaryAuthenticationType);
             var identity = user.Identities.First();
 
             var claims = login.Claims;
@@ -203,8 +216,29 @@ namespace IdentityServer3.Core.Extensions
                 identity.AddClaims(claims);
             }
 
+            //Are we a partial sign in?
+            if (isPartial)
+            {
+                // add claim so partial redirect can return here to continue login
+                // we need a random ID to resume, and this will be the query string
+                // to match a claim added. the claim added will be the original 
+                // signIn ID. 
+                var resumeId = IdentityModel.CryptoRandom.CreateUniqueId();
+
+                var resumeLoginUrl = context.GetPartialLoginResumeUrl(resumeId);
+                var resumeLoginClaim = new Claim(Constants.ClaimTypes.PartialLoginReturnUrl, resumeLoginUrl);
+                identity.AddClaim(resumeLoginClaim);
+                identity.AddClaim(new Claim(String.Format(Constants.ClaimTypes.PartialLoginResumeId, resumeId), loginId));
+
+                // add url to start login process over again (which re-triggers preauthenticate)
+                var restartUrl = context.GetPartialLoginRestartUrl(loginId);
+                identity.AddClaim(new Claim(Constants.ClaimTypes.PartialLoginRestartUrl, restartUrl));
+            }
+            else
+                //We are not - issue the session.
+                sessionCookie.IssueSessionId(login.PersistentLogin, login.PersistentLoginExpiration);
+
             context.Authentication.SignIn(props, identity);
-            sessionCookie.IssueSessionId(login.PersistentLogin, login.PersistentLoginExpiration);
         }
 
         /// <summary>
